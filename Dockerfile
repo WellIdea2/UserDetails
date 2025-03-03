@@ -1,11 +1,14 @@
-# Use an official Java runtime as a parent image
-FROM amazoncorretto:21.0.4-alpine3.18
-
-# Set the working directory in the container
+# Stage 1: Maven build
+FROM maven:3.9.6-eclipse-temurin-21 AS build
 WORKDIR /app
+COPY . .
+RUN mvn clean package -DskipTests
 
-# Copy the JAR file into the container
-COPY target/userDetails-details-1.0.0.jar app.jar
+# Remove unnecessary files from the build stage
+RUN rm -rf /root/.m2
 
-# Run the JAR file
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Stage 2: Run the application
+FROM eclipse-temurin:21.0.2_13-jre
+WORKDIR /app
+COPY --from=build /app/target/userDetails-details-1.0.0.jar /app/application-service.jar
+CMD ["java", "-jar", "application-service.jar"]
