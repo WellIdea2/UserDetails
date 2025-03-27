@@ -1,5 +1,7 @@
 package com.floxie.user_details.features.user_details.services;
 
+import static com.floxie.user_details.infrastructure.exceptions.ExceptionMessages.*;
+
 import com.floxie.user_details.features.user_details.dto.UserDetailsCreateRequest;
 import com.floxie.user_details.features.user_details.dto.UserDetailsEditRequest;
 import com.floxie.user_details.features.user_details.entity.UserDetails;
@@ -7,16 +9,13 @@ import com.floxie.user_details.features.user_details.mappers.UserDetailsMapper;
 import com.floxie.user_details.features.user_details.repository.UserDetailsRepository;
 import com.floxie.user_details.infrastructure.config.security.SecurityUtils;
 import com.floxie.user_details.infrastructure.rabbitmq.UserDetailsProducer;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.commons.exceptions.throwable.BadRequestException;
 import org.commons.exceptions.throwable.NotFoundException;
 import org.commons.feature.user_details.dto.UserDetailsView;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.UUID;
-
-import static com.floxie.user_details.infrastructure.exceptions.ExceptionMessages.USER_DETAILS_NOT_FOUND;
-import static com.floxie.user_details.infrastructure.exceptions.ExceptionMessages.USER_DETAILS_NOT_FOUND_FOR_USER;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +31,14 @@ public class UserDetailsServiceImp implements UserDetailsService {
 
   public UserDetailsView create(UserDetailsCreateRequest dto) {
     var user = SecurityUtils.getCurrentLoggedInUser();
+
+    repository
+        .findByUserId(user.id())
+        .ifPresent(
+            userDetails -> {
+              throw new BadRequestException(USER_DETAILS_ALREADY_EXISTS);
+            });
+
     var entity = mapper.toEntity(dto);
 
     entity.setUserId(user.id());
